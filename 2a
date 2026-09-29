@@ -1,0 +1,317 @@
+# Association Rule Mining using Apriori
+# Discretization and Resampling
+
+import pandas as pd
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from mlxtend.preprocessing import TransactionEncoder
+from mlxtend.frequent_patterns import apriori, association_rules
+
+# ---------------------------------------------------------
+# 1. WEATHER DATASET
+# ---------------------------------------------------------
+
+weather = pd.DataFrame({
+    'outlook': [
+        'sunny', 'sunny', 'overcast', 'rainy', 'rainy',
+        'rainy', 'overcast', 'sunny', 'sunny', 'rainy',
+        'sunny', 'overcast', 'overcast', 'rainy'
+    ],
+    'temperature': [
+        'hot', 'hot', 'hot', 'mild', 'cool',
+        'cool', 'cool', 'mild', 'cool', 'mild',
+        'mild', 'mild', 'hot', 'mild'
+    ],
+    'humidity': [
+        'high', 'high', 'high', 'high', 'normal',
+        'normal', 'normal', 'high', 'normal', 'normal',
+        'normal', 'high', 'normal', 'high'
+    ],
+    'windy': [
+        'false', 'true', 'false', 'false', 'false',
+        'true', 'true', 'false', 'false', 'false',
+        'true', 'true', 'false', 'true'
+    ],
+    'play': [
+        'no', 'no', 'yes', 'yes', 'yes',
+        'no', 'yes', 'no', 'yes', 'yes',
+        'yes', 'yes', 'yes', 'no'
+    ]
+})
+
+print("\n================ WEATHER DATASET ================")
+print(weather)
+
+# Convert categorical data to one-hot encoded format
+weather_encoded = pd.get_dummies(weather)
+
+# Find frequent itemsets
+frequent_weather = apriori(
+    weather_encoded,
+    min_support=0.2,
+    use_colnames=True
+)
+
+# Generate rules
+weather_rules = association_rules(
+    frequent_weather,
+    metric="confidence",
+    min_threshold=0.8
+)
+
+print("\nFrequent Itemsets:")
+print(frequent_weather)
+
+print("\nAssociation Rules:")
+print(
+    weather_rules[
+        ['antecedents', 'consequents',
+         'support', 'confidence', 'lift']
+    ]
+)
+
+
+# ---------------------------------------------------------
+# 2. IRIS DATASET
+# ---------------------------------------------------------
+
+iris = load_iris()
+
+iris_df = pd.DataFrame(
+    iris.data,
+    columns=[
+        'sepal_length',
+        'sepal_width',
+        'petal_length',
+        'petal_width'
+    ]
+)
+
+iris_df['class'] = [
+    iris.target_names[i]
+    for i in iris.target
+]
+
+print("\n================ IRIS DATASET ================")
+print(iris_df.head())
+
+# ---------------------------------------------------------
+# Discretization
+# ---------------------------------------------------------
+
+iris_discrete = iris_df.copy()
+
+numeric_columns = [
+    'sepal_length',
+    'sepal_width',
+    'petal_length',
+    'petal_width'
+]
+
+for column in numeric_columns:
+    iris_discrete[column] = pd.cut(
+        iris_discrete[column],
+        bins=3,
+        labels=[
+            column + "_low",
+            column + "_medium",
+            column + "_high"
+        ]
+    )
+
+print("\nDiscretized Iris Dataset:")
+print(iris_discrete.head())
+
+# One-hot encoding
+iris_encoded = pd.get_dummies(iris_discrete)
+
+# Apriori
+frequent_iris = apriori(
+    iris_encoded,
+    min_support=0.2,
+    use_colnames=True
+)
+
+iris_rules = association_rules(
+    frequent_iris,
+    metric="confidence",
+    min_threshold=0.8
+)
+
+print("\nIris Frequent Itemsets:")
+print(frequent_iris)
+
+print("\nIris Association Rules:")
+print(
+    iris_rules[
+        ['antecedents', 'consequents',
+         'support', 'confidence', 'lift']
+    ]
+)
+
+
+# ---------------------------------------------------------
+# 3. RESAMPLING IRIS DATASET
+# ---------------------------------------------------------
+
+iris_sample = iris_discrete.sample(
+    frac=0.5,
+    random_state=42
+)
+
+print("\n================ RESAMPLED IRIS ================")
+print("Original instances:", len(iris_discrete))
+print("Resampled instances:", len(iris_sample))
+
+iris_sample_encoded = pd.get_dummies(iris_sample)
+
+frequent_sample = apriori(
+    iris_sample_encoded,
+    min_support=0.2,
+    use_colnames=True
+)
+
+sample_rules = association_rules(
+    frequent_sample,
+    metric="confidence",
+    min_threshold=0.7
+)
+
+print("\nRules after Resampling:")
+print(
+    sample_rules[
+        ['antecedents', 'consequents',
+         'support', 'confidence', 'lift']
+    ]
+)
+
+
+# ---------------------------------------------------------
+# 4. GLASS DATASET
+# ---------------------------------------------------------
+
+# Example glass dataset
+glass = pd.DataFrame({
+    'RI': [1.521, 1.517, 1.516, 1.518, 1.520,
+           1.515, 1.519, 1.517, 1.521, 1.518],
+
+    'Na': [13.64, 13.00, 13.30, 12.85, 13.27,
+           12.79, 13.49, 12.98, 13.21, 13.10],
+
+    'Mg': [4.49, 3.47, 3.52, 3.56, 3.45,
+           3.50, 3.48, 3.54, 3.50, 3.52],
+
+    'Al': [1.10, 1.36, 1.40, 1.27, 1.38,
+           1.29, 1.35, 1.30, 1.33, 1.28],
+
+    'Type': [
+        'building',
+        'building',
+        'building',
+        'building',
+        'building',
+        'vehicle',
+        'vehicle',
+        'vehicle',
+        'vehicle',
+        'vehicle'
+    ]
+})
+
+print("\n================ GLASS DATASET ================")
+print(glass)
+
+# ---------------------------------------------------------
+# Discretize Glass
+# ---------------------------------------------------------
+
+glass_discrete = glass.copy()
+
+numeric_glass = [
+    'RI',
+    'Na',
+    'Mg',
+    'Al'
+]
+
+for column in numeric_glass:
+    glass_discrete[column] = pd.cut(
+        glass_discrete[column],
+        bins=3,
+        labels=[
+            column + "_low",
+            column + "_medium",
+            column + "_high"
+        ]
+    )
+
+print("\nDiscretized Glass:")
+print(glass_discrete)
+
+# ---------------------------------------------------------
+# Resample Glass
+# ---------------------------------------------------------
+
+glass_sample = glass_discrete.sample(
+    frac=0.5,
+    random_state=42
+)
+
+print("\nOriginal Glass Instances:", len(glass_discrete))
+print("Resampled Glass Instances:", len(glass_sample))
+
+# One-hot encoding
+glass_encoded = pd.get_dummies(glass_sample)
+
+# ---------------------------------------------------------
+# Apriori on Glass
+# ---------------------------------------------------------
+
+frequent_glass = apriori(
+    glass_encoded,
+    min_support=0.1,
+    use_colnames=True
+)
+
+glass_rules = association_rules(
+    frequent_glass,
+    metric="confidence",
+    min_threshold=0.7
+)
+
+print("\nGlass Association Rules:")
+print(
+    glass_rules[
+        ['antecedents', 'consequents',
+         'support', 'confidence', 'lift']
+    ]
+)
+
+
+# ---------------------------------------------------------
+# 5. SUMMARY
+# ---------------------------------------------------------
+
+print("\n================ SUMMARY ================")
+
+print("""
+Weather:
+- Nominal data
+- Apriori applied directly
+
+Iris:
+- Numeric data
+- Discretization applied
+- Apriori applied after discretization
+
+Glass:
+- Numeric data
+- Resampling applied
+- Discretization applied
+- Apriori applied
+
+Important Metrics:
+- Support
+- Confidence
+- Lift
+""")
